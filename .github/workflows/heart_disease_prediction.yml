@@ -1,0 +1,114 @@
+name: Heart disease prediction project
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  
+
+jobs:
+
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./requirements/requirements.txt
+
+      - name: syntax check
+        run: |
+          pylint ./heart_model/*.py || true
+          black ./heart_model/*.py
+
+      - name: Install build Dependencies
+        run: |
+          python ./heart_model/train_pipeline.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heart_model_pipeline
+          path: heart_model/trained_models/*.pkl
+          retention-days: 1
+
+  test:
+    needs: train
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+      - uses: actions/download-artifact@v4
+        with:
+          name: heart_model_pipeline
+          path: heart_model/trained_models
+      - name: Install dependencies
+        run: pip install -r requirements/test_requirements.txt
+      - name: Test with pytest
+        run: pytest
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+      - uses: actions/download-artifact@v4
+        with:
+          name: heart_model_pipeline
+          path: heart_model/trained_models
+      - name: Install dependencies
+        run: pip install --upgrade build
+      - name: build package
+        run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+         name: heart-build-package
+         path: dist/*.whl
+         retention-days: 1
+
+  build-and-push-image:
+    needs: [train, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: heart-build-package
+          path: dist
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_UNAME }}" --password-stdin
+
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.DOCKER_UNAME }}/heartapi:latest .
+
+      - name: Push Image
+        run: docker push ${{ secrets.DOCKER_UNAME }}/heartapi:latest
+
+  deploy:
+    needs: build-and-push-image
+    runs-on: self-hosted
+    steps:
+      - name: Pull Latest Image
+        run: sudo docker pull ${{ secrets.DOCKER_UNAME }}/heartapi:latest
+
+      - name: Remove Old Container
+        run: |
+          sudo docker stop heartapi-container || true
+          sudo docker rm heartapi-container || true
+
+      - name: Start New Container
+        run: sudo docker run -d --name heartapi-container -p 8001:8001 ${{ secrets.DOCKER_UNAME }}/heartapi:latest
