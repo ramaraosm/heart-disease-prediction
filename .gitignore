@@ -1,0 +1,11 @@
+heartvenv/
+dist/*
+heart_api/app/__pycache__/
+heart_api/app/schemas/__pycache__/
+heart_model-0.0.1-py3-none-any.whl
+heart_model.egg-info/
+heart_model/__pycache__/
+heart_model/config/__pycache__/
+heart_model/processing/__pycache__/
+heart_model/trained_models/heart__model_output_v0.0.1.pkl
+tests/__pycache__/

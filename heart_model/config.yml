@@ -1,0 +1,64 @@
+# Package Overview
+package_name: heart_model
+
+# Data Files
+training_data_file: heart_dataset.csv
+
+# Variables
+# The variable we are attempting to predict (cnt)
+target: target
+
+pipeline_name: heart_model
+pipeline_save_file: heart__model_output_v
+
+# Features that will go inside processing pipeline
+features:
+  - age
+  - sex
+  - cp
+  - trestbps
+  - chol
+  - fbs
+  - restecg
+  - thalach
+  - exang
+  - oldpeak
+  - slope
+  - ca
+  - thal
+
+
+# Features names
+
+age_var: age
+sex_var: sex
+cp_var: cp
+trestbps_var: trestbps
+chol_var: chol
+fbs_var: fbs
+restecg_var: restecg
+thalach_var: thalach
+exang_var: exang
+oldpeak_var: oldpeak
+slope_var: slope
+ca_var: ca
+thal_var: thal
+
+
+
+# Mappings for Ordinal categorical features
+
+thal_mappings:
+  normal: 1
+  fixed: 0
+  reversible: 2
+  
+# Set train/test split
+test_size: 0.2
+
+# Set the random seed
+random_state: 42
+
+# Alogrithm parameters
+n_estimators: 150
+max_depth: 8
